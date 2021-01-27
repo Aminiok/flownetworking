@@ -1,97 +1,98 @@
 package LogicalRouter
 
 import (
-	"log"
-	"os/exec"
 	"bufio"
-	"strings"
-	"strconv"
 	"flownet/Tools"
 	"fmt"
+	"log"
+	"os/exec"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 type logicalRouterPort struct {
-	name string
-	uuid string
-	mac string
-	networks string
+	name            string
+	uuid            string
+	mac             string
+	networks        string
 	redirectChassis string
 }
 
 type logicalRouter struct {
-	name []string
-	nat []string
-	ports []string
+	name         []string
+	nat          []string
+	ports        []string
 	staticRoutes []string
 }
 
 type logicalRouterDetail struct {
-	name string
-	logicalRouter logicalRouter
+	name               string
+	logicalRouter      logicalRouter
 	logicalRouterPorts []logicalRouterPort
 }
 
 type logicalRouterRoute struct {
-	routerName string
-	ipRoute string
+	routerName  string
+	ipRoute     string
 	destination string
-	origin	string
+	origin      string
 }
 
 type logicalRouterNat struct {
 	routerName string
-	natType string
+	natType    string
 	externalIp string
-	logicalIp string
+	logicalIp  string
 }
 
-func New() (logicalRouter) {
+func New() logicalRouter {
 	lr := logicalRouter{}
 	return lr
 }
 
-func refactorStringList(stringList []string) ([]string){
+func refactorStringList(stringList []string) []string {
 	newList := []string{}
-	for _, item := range  stringList {
+	for _, item := range stringList {
 		if strings.HasPrefix(item, "[") {
-			item = item[1:len(item)]		
-		} 
+			item = item[1:len(item)]
+		}
 		if strings.HasPrefix(item, "\"") {
-			item = item[1:len(item)]		
-		}  
-		if ( strings.HasSuffix(item, ",") || strings.HasSuffix(item, "]") ) {
-			item = item[0:len(item)-1]
-		} 
+			item = item[1:len(item)]
+		}
+		if strings.HasSuffix(item, ",") || strings.HasSuffix(item, "]") {
+			item = item[0 : len(item)-1]
+		}
 		if strings.HasSuffix(item, "\"") {
-			item = item[0:len(item)-1]
-		} 
-		newList = append (newList, item)
+			item = item[0 : len(item)-1]
+		}
+		newList = append(newList, item)
 	}
 	return newList
 }
 
-func refactorString(origString string) (string){
+func refactorString(origString string) string {
 	if strings.HasPrefix(origString, "[") {
-		origString = origString[1:len(origString)]		
-	} 
+		origString = origString[1:len(origString)]
+	}
 	if strings.HasPrefix(origString, "\"") {
-		origString = origString[1:len(origString)]		
-	}  
-	if ( strings.HasSuffix(origString, ",") || strings.HasSuffix(origString, "]") ) {
-		origString = origString[0:len(origString)-1]
-	} 
+		origString = origString[1:len(origString)]
+	}
+	if strings.HasSuffix(origString, ",") || strings.HasSuffix(origString, "]") {
+		origString = origString[0 : len(origString)-1]
+	}
 	if strings.HasSuffix(origString, "\"") {
-		origString = origString[0:len(origString)-1]
-	} 
+		origString = origString[0 : len(origString)-1]
+	}
 	return origString
 }
 
-func getLogicalRouters(ovnPod string) ([]logicalRouter) {
-	kubeCtlCmd := exec.Command("/usr/bin/kubectl" , "exec" , ovnPod , "ovn-nbctl" , "list", "Logical_Router")
+func getLogicalRouters(ovnPod string) []logicalRouter {
+	tools := Tools.New()
+	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Router")
 	out, err := kubeCtlCmd.Output()
-    if err != nil {
-        log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
 	}
 	output := string(out)
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -101,13 +102,13 @@ func getLogicalRouters(ovnPod string) ([]logicalRouter) {
 		line := strings.Fields(scanner.Text())
 		if len(line) >= 3 {
 			if line[0] == "name" {
-				lr.name = refactorStringList(line[2:len(line)])
+				lr.name = tools.RefactorStringList(line[2:len(line)])
 			} else if line[0] == "nat" {
-				lr.nat = refactorStringList(line[2:len(line)])
+				lr.nat = tools.RefactorStringList(line[2:len(line)])
 			} else if line[0] == "ports" {
-				lr.ports = refactorStringList(line[2:len(line)])
+				lr.ports = tools.RefactorStringList(line[2:len(line)])
 			} else if line[0] == "static_routes" {
-				lr.staticRoutes = refactorStringList(line[2:len(line)])
+				lr.staticRoutes = tools.RefactorStringList(line[2:len(line)])
 			}
 		} else {
 			logicalRouters = append(logicalRouters, lr)
@@ -117,13 +118,14 @@ func getLogicalRouters(ovnPod string) ([]logicalRouter) {
 	return logicalRouters
 }
 
-func getLogicalRouterPorts(ovnPod string) ([]logicalRouterPort) {
-	kubeCtlCmd := exec.Command("/usr/bin/kubectl" , "exec" , "anc-ovn-0" , "ovn-nbctl" , "list", "Logical_Router_Port")
+func getLogicalRouterPorts(ovnPod string) []logicalRouterPort {
+	tools := Tools.New()
+	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", "anc-ovn-0", "ovn-nbctl", "list", "Logical_Router_Port")
 	redirectChassisRegex := regexp.MustCompile(".*redirect-chassis=\"([A-za-z0-9-]*)")
 	//redirectChassisRegex := regexp.MustCompile("([A-za-z0-9-_])")
 	out, err := kubeCtlCmd.Output()
-    if err != nil {
-        log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
 	}
 	output := string(out)
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -133,21 +135,21 @@ func getLogicalRouterPorts(ovnPod string) ([]logicalRouterPort) {
 		line := strings.Fields(scanner.Text())
 		if len(line) == 3 {
 			if line[0] == "_uuid" {
-				lri.uuid = refactorString(line[2])
+				lri.uuid = tools.RefactorString(line[2])
 			} else if line[0] == "mac" {
-				lri.mac = refactorString(line[2])
+				lri.mac = tools.RefactorString(line[2])
 			} else if line[0] == "name" {
-				lri.name = refactorString(line[2])
+				lri.name = tools.RefactorString(line[2])
 			} else if line[0] == "networks" {
-				lri.networks = refactorString(line[2])
-			} else if (line[0] == "options") {
-				if (strings.Contains(line[2], "redirect-chassis=")) {
+				lri.networks = tools.RefactorString(line[2])
+			} else if line[0] == "options" {
+				if strings.Contains(line[2], "redirect-chassis=") {
 					split := strings.Split(redirectChassisRegex.FindString(line[2]), "=")
-					lri.redirectChassis = refactorString(split[1])
+					lri.redirectChassis = tools.RefactorString(split[1])
 				} else {
 					lri.redirectChassis = ""
-				}		
-			} 
+				}
+			}
 		} else {
 			logicalRouterPorts = append(logicalRouterPorts, lri)
 			lri := logicalRouterPort{}
@@ -160,7 +162,7 @@ func getLogicalRouterPorts(ovnPod string) ([]logicalRouterPort) {
 	return logicalRouterPorts
 }
 
-func getLogicalRoutersDetail(ovnPod string) () {
+func getLogicalRoutersDetail(ovnPod string) {
 	tools := Tools.New()
 	lRouterInterface := getLogicalRouterPorts(ovnPod)
 	lRouters := getLogicalRouters(ovnPod)
@@ -170,11 +172,11 @@ func getLogicalRoutersDetail(ovnPod string) () {
 		i := 1
 		logicalRouterDetail := logicalRouterDetail{}
 		logicalRouterDetail.name = router.name[0]
-		for _, routerPort := range router.ports {	
+		for _, routerPort := range router.ports {
 			for _, detailedPort := range lRouterInterface {
 				if routerPort == detailedPort.uuid {
 					logicalRouterDetail.logicalRouterPorts = append(logicalRouterDetail.logicalRouterPorts, detailedPort)
-					outputData = append(outputData, []string{router.name[0] , strconv.Itoa(i), detailedPort.mac, detailedPort.networks, detailedPort.redirectChassis})
+					outputData = append(outputData, []string{router.name[0], strconv.Itoa(i), detailedPort.mac, detailedPort.networks, detailedPort.redirectChassis})
 					i++
 				}
 			}
@@ -188,7 +190,7 @@ func getLogicalRoutersDetail(ovnPod string) () {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func listLogicalRoutersRoutes(ovnPod string) () {
+func listLogicalRoutersRoutes(ovnPod string) {
 	name := ""
 	outputData := [][]string{}
 	tools := Tools.New()
@@ -197,8 +199,8 @@ func listLogicalRoutersRoutes(ovnPod string) () {
 	for _, router := range lRouters {
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-route-list", router.name[0])
 		out, err := getRouteCommand.Output()
-    	if err != nil {
-        	log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
 		}
 		output := string(out)
 		scanner := bufio.NewScanner(strings.NewReader(output))
@@ -214,7 +216,7 @@ func listLogicalRoutersRoutes(ovnPod string) () {
 					lrr.ipRoute = line[0]
 					lrr.destination = line[1]
 					data = []string{lrr.routerName, lrr.ipRoute, lrr.destination, ""}
-				} 
+				}
 				if len(line) > 3 {
 					lrr.origin = line[3]
 					data[3] = lrr.origin
@@ -227,19 +229,19 @@ func listLogicalRoutersRoutes(ovnPod string) () {
 				logicalRouterRoutes = append(logicalRouterRoutes, lrr)
 				outputData = append(outputData, data)
 			}
-		}	
+		}
 	}
 	header := []string{"Router Name", "Destination", "Next Hop", "Origin"}
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func showLogicalRouterRoutes(routerName string, ovnPod string) () {
+func showLogicalRouterRoutes(routerName string, ovnPod string) {
 	outputData := [][]string{}
 	tools := Tools.New()
 	getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-route-list", routerName)
 	out, err := getRouteCommand.Output()
-    if err != nil {
-    	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
 	}
 	output := string(out)
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -253,7 +255,7 @@ func showLogicalRouterRoutes(routerName string, ovnPod string) () {
 				lrr.ipRoute = line[0]
 				lrr.destination = line[1]
 				data = []string{lrr.routerName, lrr.ipRoute, lrr.destination, ""}
-			} 
+			}
 			if len(line) > 3 {
 				lrr.origin = line[3]
 				data[3] = lrr.origin
@@ -270,7 +272,7 @@ func showLogicalRouterRoutes(routerName string, ovnPod string) () {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func listLogicalRoutersNat(ovnPod string) () {
+func listLogicalRoutersNat(ovnPod string) {
 	outputData := [][]string{}
 	tools := Tools.New()
 	lRouters := getLogicalRouters(ovnPod)
@@ -278,8 +280,8 @@ func listLogicalRoutersNat(ovnPod string) () {
 	for _, router := range lRouters {
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-nat-list", router.name[0])
 		out, err := getRouteCommand.Output()
-    	if err != nil {
-        	log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
 		}
 		output := string(out)
 		scanner := bufio.NewScanner(strings.NewReader(output))
@@ -294,26 +296,26 @@ func listLogicalRoutersNat(ovnPod string) () {
 					lrn.externalIp = line[1]
 					lrn.logicalIp = line[2]
 					data = []string{lrn.routerName, lrn.natType, lrn.externalIp, lrn.logicalIp}
-				} 
+				}
 			}
 			if lrn.routerName != "" {
 				logicalRoutersNat = append(logicalRoutersNat, lrn)
 				outputData = append(outputData, data)
 			}
-		}	
+		}
 	}
 	header := []string{"Router Name", "Nat Type", "External IP", "Logical IP"}
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func showLogicalRouterNat(routerName string, ovnPod string) () {
+func showLogicalRouterNat(routerName string, ovnPod string) {
 	outputData := [][]string{}
 	data := []string{"", "", "", ""}
 	tools := Tools.New()
 	getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-nat-list", routerName)
 	out, err := getRouteCommand.Output()
-    if err != nil {
-        log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
 	}
 	output := string(out)
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -328,25 +330,25 @@ func showLogicalRouterNat(routerName string, ovnPod string) () {
 				lrn.externalIp = line[1]
 				lrn.logicalIp = line[2]
 				data = []string{lrn.routerName, lrn.natType, lrn.externalIp, lrn.logicalIp}
-			} 
+			}
 		}
 		outputData = append(outputData, data)
-	}	
+	}
 	header := []string{"Router Name", "Nat Type", "External IP", "Logical IP"}
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string) () {
-	if (len(inputParams) == 1){
+func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string) {
+	if len(inputParams) == 1 {
 		getLogicalRoutersDetail(ovnPod)
 	} else if (len(inputParams) == 2 && inputParams[1] == "routes") || (len(inputParams) == 2 && inputParams[1] == "rt") {
 		listLogicalRoutersRoutes(ovnPod)
-	}  else if (len(inputParams) == 2 && inputParams[1] == "nat") || (len(inputParams) == 2 && inputParams[1] == "nats") {
+	} else if (len(inputParams) == 2 && inputParams[1] == "nat") || (len(inputParams) == 2 && inputParams[1] == "nats") {
 		listLogicalRoutersNat(ovnPod)
 	}
 }
 
-func (lr logicalRouter) ShowLogicalRoutersDetail(ovnPod string, inputParams []string) () {
+func (lr logicalRouter) ShowLogicalRoutersDetail(ovnPod string, inputParams []string) {
 	if (len(inputParams) == 3 && inputParams[1] == "routes") || (len(inputParams) == 3 && inputParams[1] == "rt") {
 		showLogicalRouterRoutes(inputParams[2], ovnPod)
 	} else if (len(inputParams) == 3 && inputParams[1] == "nat") || (len(inputParams) == 3 && inputParams[1] == "nats") {
