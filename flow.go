@@ -1,11 +1,12 @@
 package main
 
 import (
-	"os"
-	"log"
-	"flownet/Tools"
-	"flownet/LogicalRouter"
 	"flownet/Chassis"
+	"flownet/LogicalRouter"
+	"flownet/LogicalSwitch"
+	"flownet/Tools"
+	"log"
+	"os"
 )
 
 func main() {
@@ -16,8 +17,8 @@ func main() {
 	}
 	if len(os.Args) < 2 {
 		tools.PrintHelp()
-	}	
-    switch os.Args[1] {
+	}
+	switch os.Args[1] {
 	case "help":
 		tools.PrintHelp()
 	case "version":
@@ -26,17 +27,18 @@ func main() {
 		runListCommand(os.Args[2:], ovnPod)
 	case "ls":
 		runListCommand(os.Args[2:], ovnPod)
-    case "show":
+	case "show":
 		runShowCommand(os.Args[2:], ovnPod)
 	case "sh":
 		runShowCommand(os.Args[2:], ovnPod)
-    default:
-        tools.PrintHelp()
-	}	
+	default:
+		tools.PrintHelp()
+	}
 }
 
 func runListCommand(resource []string, ovnPod string) {
 	lr := LogicalRouter.New()
+	ls := LogicalSwitch.New()
 	ch := Chassis.New()
 	tools := Tools.New()
 	switch resource[0] {
@@ -44,6 +46,10 @@ func runListCommand(resource []string, ovnPod string) {
 		lr.ListLogicalRoutersDetail(ovnPod, resource)
 	case "lr":
 		lr.ListLogicalRoutersDetail(ovnPod, resource)
+	case "logicalswitch":
+		ls.ListLogicalSwitchDetail(ovnPod, resource)
+	case "ls":
+		ls.ListLogicalSwitchDetail(ovnPod, resource)
 	case "chassis":
 		ch.ListChassisDetail(ovnPod, resource)
 	case "ch":

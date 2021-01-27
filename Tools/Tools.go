@@ -124,3 +124,12 @@ func (param *params) GetNetworkFromIP(ipAddress string) string {
 	}
 	return ""
 }
+
+func (param *params) Contains(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}

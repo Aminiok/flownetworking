@@ -51,42 +51,6 @@ func New() logicalRouter {
 	return lr
 }
 
-func refactorStringList(stringList []string) []string {
-	newList := []string{}
-	for _, item := range stringList {
-		if strings.HasPrefix(item, "[") {
-			item = item[1:len(item)]
-		}
-		if strings.HasPrefix(item, "\"") {
-			item = item[1:len(item)]
-		}
-		if strings.HasSuffix(item, ",") || strings.HasSuffix(item, "]") {
-			item = item[0 : len(item)-1]
-		}
-		if strings.HasSuffix(item, "\"") {
-			item = item[0 : len(item)-1]
-		}
-		newList = append(newList, item)
-	}
-	return newList
-}
-
-func refactorString(origString string) string {
-	if strings.HasPrefix(origString, "[") {
-		origString = origString[1:len(origString)]
-	}
-	if strings.HasPrefix(origString, "\"") {
-		origString = origString[1:len(origString)]
-	}
-	if strings.HasSuffix(origString, ",") || strings.HasSuffix(origString, "]") {
-		origString = origString[0 : len(origString)-1]
-	}
-	if strings.HasSuffix(origString, "\"") {
-		origString = origString[0 : len(origString)-1]
-	}
-	return origString
-}
-
 func getLogicalRouters(ovnPod string) []logicalRouter {
 	tools := Tools.New()
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Router")
@@ -122,7 +86,6 @@ func getLogicalRouterPorts(ovnPod string) []logicalRouterPort {
 	tools := Tools.New()
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", "anc-ovn-0", "ovn-nbctl", "list", "Logical_Router_Port")
 	redirectChassisRegex := regexp.MustCompile(".*redirect-chassis=\"([A-za-z0-9-]*)")
-	//redirectChassisRegex := regexp.MustCompile("([A-za-z0-9-_])")
 	out, err := kubeCtlCmd.Output()
 	if err != nil {
 		log.Fatal(err)
