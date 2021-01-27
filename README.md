@@ -3,7 +3,7 @@
 This tool is developed to help the user to execute the commands on Flow Networking Atlase Network Controllers (ANC)
 
 ## Prerequirements
-The *flow* command requires to be run on the *master* node of ANC and requires *kubectl* already installed. To run the *flow* command, the *flow* binary file needs to be copied the '</usr/local/bin>' path of the *master nodes*.
+The *flow* command requires to be run on the *master* node of ANC and requires *kubectl* already installed. To run the *flow* command, the *flow* binary file needs to be copied the `</usr/local/bin>` path of the *master nodes*.
 
 ## Help
     Usage:
