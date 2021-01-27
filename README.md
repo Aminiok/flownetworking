@@ -14,12 +14,14 @@ The *flow* command requires to be run on the *master* node of ANC and requires *
         version                           displays version number
         help                              displays the help
     Resources:
+        logicalswitch|ls                  logical switch
         logicalrouter|lr                  logical router
         chassis|ch                        chassis
 
 
 ## Example:
-        flow ls lr                        displays the list of logical routers
+        flow ls lr                        displays the list of logical routers and their ports
+        flow ls ls                        displays the list of logical switches and their ports
         flow ls ch                        displays the list of chassis
         flow ls lr nat                    displays the list of NAT on each logicalrouter
         flow ls lr routes                 displays the list of routes on each logicalrouter
