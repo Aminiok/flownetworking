@@ -2,12 +2,19 @@ package Chassis
 
 import (
 	"bufio"
+	"flownet/LogicalPort"
 	"flownet/Tools"
 	"fmt"
 	"log"
 	"os/exec"
 	"strings"
 )
+
+// ChassisList is a list of all Chassis
+type ChassisList struct {
+	chassisList []chassis
+	chassisDict ChassisDict
+}
 
 type chassisPort struct {
 	portName string
@@ -20,12 +27,32 @@ type chassis struct {
 	ip       string
 }
 
-func New() chassis {
-	ch := chassis{}
+type printableChassis struct {
+	data       [][]string
+	header     []string
+	mergedCell []int
+}
+
+//PrintableChassis variable
+var PrintableChassis = printableChassis{
+	data:       [][]string{{}},
+	header:     []string{""},
+	mergedCell: []int{0},
+}
+
+// ChassisDict is a dict of chassis ID IP and Hostname
+type ChassisDict struct {
+	ChassisHostNameDict map[string]string
+	ChassisIPDict       map[string]string
+}
+
+// New chassis object
+func New(ovnPod string) ChassisList {
+	ch, _ := listChassis(ovnPod)
 	return ch
 }
 
-func listChassis(ovnPod string) {
+func listChassis(ovnPod string) (ChassisList, printableChassis) {
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-sbctl", "show")
 	out, err := kubeCtlCmd.Output()
 	if err != nil {
@@ -34,9 +61,13 @@ func listChassis(ovnPod string) {
 	output := string(out)
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	tools := Tools.New()
+	chassisList := ChassisList{}
 	ch := chassis{}
 	data := []string{}
 	outputData := [][]string{}
+	chassisHostnameDict := make(map[string]string)
+	chassisIPDict := make(map[string]string)
+	chassisDict := ChassisDict{}
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
 		if len(line) == 2 {
@@ -44,20 +75,28 @@ func listChassis(ovnPod string) {
 				ch.name = tools.RefactorString(line[1])
 			} else if line[0] == "hostname:" {
 				ch.hostname = tools.RefactorString(line[1])
+				chassisHostnameDict[ch.name] = ch.hostname
 			} else if line[0] == "Encap" {
 				ch.encap = tools.RefactorString(line[1])
 			} else if line[0] == "ip:" {
 				ch.ip = tools.RefactorString(line[1])
+				chassisIPDict[ch.name] = ch.ip
+				chassisList.chassisList = append(chassisList.chassisList, ch)
 				data = []string{ch.name, ch.hostname, ch.encap, ch.ip}
 				outputData = append(outputData, data)
 			}
 		}
 	}
-	header := []string{"Chassis Name", "Hostname", "Encap", "IP"}
-	tools.ShowInTable(outputData, header, []int{0})
+	PrintableChassis.data = outputData
+	PrintableChassis.header = []string{"Chassis Name", "Hostname", "Encap", "IP"}
+	PrintableChassis.mergedCell = []int{0}
+	chassisDict.ChassisHostNameDict = chassisHostnameDict
+	chassisDict.ChassisIPDict = chassisIPDict
+	chassisList.chassisDict = chassisDict
+	return chassisList, PrintableChassis
 }
 
-func showChassis(chassisName string, ovnPod string) {
+func showChassis(chassisName string, ovnPod string, logicalPortDict LogicalPort.PortDict) {
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-sbctl", "show")
 	out, err := kubeCtlCmd.Output()
 	if err != nil {
@@ -85,33 +124,50 @@ func showChassis(chassisName string, ovnPod string) {
 			} else if line[0] == "ip:" && isChassisInfo {
 				ch.ip = tools.RefactorString(line[1])
 			} else if line[0] == "Port_Binding" && isChassisInfo {
-				data = []string{ch.name, ch.hostname, ch.encap, ch.ip, tools.RefactorString(line[1])}
+				pbID := tools.RefactorString(line[1])
+				PortIP := logicalPortDict.PortIPDict[pbID]
+				portMAC := logicalPortDict.PortMACDict[pbID]
+				data = []string{ch.name, ch.hostname, ch.encap, ch.ip, pbID, PortIP, portMAC}
 				outputData = append(outputData, data)
 			}
 		}
 	}
 	if len(outputData) > 0 {
-		header := []string{"Chassis Name", "Hostname", "Encap", "IP", "Ports"}
+		header := []string{"Chassis ID", "Hostname", "Encap", "IP", "Port ID", "Port IP", "Port MAC"}
 		tools.ShowInTable(outputData, header, []int{0, 1, 2, 3})
 	} else {
 		log.Println("Chassis not found!")
 		tools.PrintHelp()
 	}
-
 }
 
-func (ch chassis) ListChassisDetail(ovnPod string, inputParams []string) {
+func printListChassis(ovnPod string) {
+	tools := Tools.New()
+	listChassis(ovnPod)
+	tools.ShowInTable(PrintableChassis.data, PrintableChassis.header, PrintableChassis.mergedCell)
+}
+
+// GetChassisDict returns a dict of Chassis IP and Hostname
+func (ch *ChassisList) GetChassisDict() ChassisDict {
+	return ch.chassisDict
+}
+
+// ListChassisDetail executes all ls ch commands
+func (ch *ChassisList) ListChassisDetail(ovnPod string, inputParams []string) {
 	if len(inputParams) == 1 {
-		listChassis(ovnPod)
+		printListChassis(ovnPod)
 	} else {
 		fmt.Println("Print Help")
 	}
 }
 
-func (ch chassis) ShowChassisDetail(ovnPod string, inputParams []string) {
+// ShowChassisDetail executes all sh ch commands
+func (ch *ChassisList) ShowChassisDetail(ovnPod string, inputParams []string, logicalPortDict LogicalPort.PortDict) {
+	tools := Tools.New()
 	if len(inputParams) == 2 {
-		showChassis(inputParams[1], ovnPod)
+		showChassis(inputParams[1], ovnPod, logicalPortDict)
 	} else {
-		fmt.Println("Command not complete! Print Help")
+		fmt.Println("Command not complete!")
+		tools.PrintHelp()
 	}
 }

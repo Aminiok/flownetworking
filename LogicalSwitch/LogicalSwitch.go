@@ -28,6 +28,33 @@ func New() logicalSwitch {
 	return ls
 }
 
+func generatePortHostDict(ovnPod string) []logicalSwitch {
+	tools := Tools.New()
+	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Switch")
+	out, err := kubeCtlCmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	output := string(out)
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	logicalSwitches := []logicalSwitch{}
+	ls := logicalSwitch{}
+	for scanner.Scan() {
+		line := strings.Fields(scanner.Text())
+		if len(line) >= 3 {
+			if line[0] == "name" {
+				ls.switchName = tools.RefactorString(line[2])
+			} else if line[0] == "ports" {
+				ls.switchPortsName = tools.RefactorStringList(line[2:len(line)])
+			}
+		} else {
+			logicalSwitches = append(logicalSwitches, ls)
+		}
+	}
+	logicalSwitches = append(logicalSwitches, ls)
+	return logicalSwitches
+}
+
 func getLogicalSwitches(ovnPod string) []logicalSwitch {
 	tools := Tools.New()
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Switch")
@@ -76,6 +103,8 @@ func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
 				lsp.portID = tools.RefactorString(line[2])
 			} else if line[0] == "addresses" && line[2] != "[router]" && line[2] != "[unknown]" {
 				lsp.portMac = tools.RefactorStringList(line[2:len(line)])[0]
+			} else if line[0] == "addresses" {
+				lsp.portMac = ""
 			} else if line[0] == "type" {
 				lsp.portType = tools.RefactorString(line[2])
 			} else if line[0] == "external_ids" {

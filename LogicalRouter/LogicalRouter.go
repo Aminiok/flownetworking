@@ -2,6 +2,7 @@ package LogicalRouter
 
 import (
 	"bufio"
+	"flownet/Chassis"
 	"flownet/Tools"
 	"fmt"
 	"log"
@@ -51,7 +52,7 @@ func New() logicalRouter {
 	return lr
 }
 
-func getLogicalRouters(ovnPod string) []logicalRouter {
+func getLogicalRouters(ovnPod string, chassisDict Chassis.ChassisDict) []logicalRouter {
 	tools := Tools.New()
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Router")
 	out, err := kubeCtlCmd.Output()
@@ -82,7 +83,7 @@ func getLogicalRouters(ovnPod string) []logicalRouter {
 	return logicalRouters
 }
 
-func getLogicalRouterPorts(ovnPod string) []logicalRouterPort {
+func getLogicalRouterPorts(ovnPod string, chassisDict Chassis.ChassisDict) []logicalRouterPort {
 	tools := Tools.New()
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", "anc-ovn-0", "ovn-nbctl", "list", "Logical_Router_Port")
 	redirectChassisRegex := regexp.MustCompile(".*redirect-chassis=\"([A-za-z0-9-]*)")
@@ -108,7 +109,7 @@ func getLogicalRouterPorts(ovnPod string) []logicalRouterPort {
 			} else if line[0] == "options" {
 				if strings.Contains(line[2], "redirect-chassis=") {
 					split := strings.Split(redirectChassisRegex.FindString(line[2]), "=")
-					lri.redirectChassis = tools.RefactorString(split[1])
+					lri.redirectChassis = chassisDict.ChassisHostNameDict[tools.RefactorString(split[1])]
 				} else {
 					lri.redirectChassis = ""
 				}
@@ -125,10 +126,10 @@ func getLogicalRouterPorts(ovnPod string) []logicalRouterPort {
 	return logicalRouterPorts
 }
 
-func getLogicalRoutersDetail(ovnPod string) {
+func getLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) {
 	tools := Tools.New()
-	lRouterInterface := getLogicalRouterPorts(ovnPod)
-	lRouters := getLogicalRouters(ovnPod)
+	lRouterInterface := getLogicalRouterPorts(ovnPod, chassisDict)
+	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRouters := []logicalRouterDetail{}
 	outputData := [][]string{}
 	for _, router := range lRouters {
@@ -153,11 +154,11 @@ func getLogicalRoutersDetail(ovnPod string) {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func listLogicalRoutersRoutes(ovnPod string) {
+func listLogicalRoutersRoutes(ovnPod string, chassisDict Chassis.ChassisDict) {
 	name := ""
 	outputData := [][]string{}
 	tools := Tools.New()
-	lRouters := getLogicalRouters(ovnPod)
+	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRouterRoutes := []logicalRouterRoute{}
 	for _, router := range lRouters {
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-route-list", router.name[0])
@@ -235,10 +236,10 @@ func showLogicalRouterRoutes(routerName string, ovnPod string) {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func listLogicalRoutersNat(ovnPod string) {
+func listLogicalRoutersNat(ovnPod string, chassisDict Chassis.ChassisDict) {
 	outputData := [][]string{}
 	tools := Tools.New()
-	lRouters := getLogicalRouters(ovnPod)
+	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRoutersNat := []logicalRouterNat{}
 	for _, router := range lRouters {
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-nat-list", router.name[0])
@@ -301,13 +302,13 @@ func showLogicalRouterNat(routerName string, ovnPod string) {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
-func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string) {
+func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string, chassisDict Chassis.ChassisDict) {
 	if len(inputParams) == 1 {
-		getLogicalRoutersDetail(ovnPod)
+		getLogicalRoutersDetail(ovnPod, chassisDict)
 	} else if (len(inputParams) == 2 && inputParams[1] == "routes") || (len(inputParams) == 2 && inputParams[1] == "rt") {
-		listLogicalRoutersRoutes(ovnPod)
+		listLogicalRoutersRoutes(ovnPod, chassisDict)
 	} else if (len(inputParams) == 2 && inputParams[1] == "nat") || (len(inputParams) == 2 && inputParams[1] == "nats") {
-		listLogicalRoutersNat(ovnPod)
+		listLogicalRoutersNat(ovnPod, chassisDict)
 	}
 }
 

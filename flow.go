@@ -2,6 +2,7 @@ package main
 
 import (
 	"flownet/Chassis"
+	"flownet/LogicalPort"
 	"flownet/LogicalRouter"
 	"flownet/LogicalSwitch"
 	"flownet/Tools"
@@ -37,22 +38,29 @@ func main() {
 }
 
 func runListCommand(resource []string, ovnPod string) {
-	lr := LogicalRouter.New()
-	ls := LogicalSwitch.New()
-	ch := Chassis.New()
+	//lp := logicalport.New(ovnPod)
+	//lp.GetPortIPDict()
 	tools := Tools.New()
 	switch resource[0] {
 	case "logicalrouters":
-		lr.ListLogicalRoutersDetail(ovnPod, resource)
+		ch := Chassis.New(ovnPod)
+		lr := LogicalRouter.New()
+		lr.ListLogicalRoutersDetail(ovnPod, resource, ch.GetChassisDict())
 	case "lr":
-		lr.ListLogicalRoutersDetail(ovnPod, resource)
+		ch := Chassis.New(ovnPod)
+		lr := LogicalRouter.New()
+		lr.ListLogicalRoutersDetail(ovnPod, resource, ch.GetChassisDict())
 	case "logicalswitch":
+		ls := LogicalSwitch.New()
 		ls.ListLogicalSwitchDetail(ovnPod, resource)
 	case "ls":
+		ls := LogicalSwitch.New()
 		ls.ListLogicalSwitchDetail(ovnPod, resource)
 	case "chassis":
+		ch := Chassis.New(ovnPod)
 		ch.ListChassisDetail(ovnPod, resource)
 	case "ch":
+		ch := Chassis.New(ovnPod)
 		ch.ListChassisDetail(ovnPod, resource)
 	default:
 		tools.PrintHelp()
@@ -62,7 +70,6 @@ func runListCommand(resource []string, ovnPod string) {
 
 func runShowCommand(resource []string, ovnPod string) {
 	lr := LogicalRouter.New()
-	ch := Chassis.New()
 	tools := Tools.New()
 	switch resource[0] {
 	case "logicalrouter":
@@ -70,9 +77,13 @@ func runShowCommand(resource []string, ovnPod string) {
 	case "lr":
 		lr.ShowLogicalRoutersDetail(ovnPod, resource)
 	case "chassis":
-		ch.ShowChassisDetail(ovnPod, resource)
+		lp := LogicalPort.New(ovnPod)
+		ch := Chassis.New(ovnPod)
+		ch.ShowChassisDetail(ovnPod, resource, lp.GetPortDict())
 	case "ch":
-		ch.ShowChassisDetail(ovnPod, resource)
+		lp := LogicalPort.New(ovnPod)
+		ch := Chassis.New(ovnPod)
+		ch.ShowChassisDetail(ovnPod, resource, lp.GetPortDict())
 	default:
 		tools.PrintHelp()
 		os.Exit(1)
