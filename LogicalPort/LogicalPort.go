@@ -3,7 +3,6 @@ package LogicalPort
 import (
 	"bufio"
 	"flownet/Tools"
-	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
@@ -30,6 +29,20 @@ type logicalPort struct {
 	portType       string
 	portChassis    string
 	portLPName     string
+	portTag        string
+}
+
+type printablePorts struct {
+	data       [][]string
+	header     []string
+	mergedCell []int
+}
+
+//PrintableChassis variable
+var PrintablePorts = printablePorts{
+	data:       [][]string{{}},
+	header:     []string{""},
+	mergedCell: []int{0},
 }
 
 // New logical port object
@@ -40,6 +53,7 @@ func New(ovnPod string) LogicalPortList {
 
 func getLogicalPortList(ovnPod string) LogicalPortList {
 	tools := Tools.New()
+	outputData := [][]string{}
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-sbctl", "list", "port_binding")
 	logicalPortExternalRegex := regexp.MustCompile(".*\"neutron:cidrs\"=\"([0-9./]*)")
 	out, err := kubeCtlCmd.Output()
@@ -77,13 +91,27 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 				lp.portType = tools.RefactorString(line[2])
 			} else if line[0] == "logical_port" {
 				lp.portLPName = tools.RefactorString(line[2])
+			} else if line[0] == "tag" {
+				lp.portTag = tools.RefactorString(line[2])
 			}
 		} else {
+			data := []string{lp.portID, lp.portChassis, lp.portIP, lp.portMac, lp.portTag, lp.portType, lp.gatewayChassis}
+			outputData = append(outputData, data)
+			data = []string{}
+			if len(data) != 0 {
+				log.Fatal("error in removing data")
+			}
 			portIPDict[lp.portLPName] = lp.portIP
 			portMACDict[lp.portLPName] = lp.portMac
 			logicalPortList.portList = append(logicalPortList.portList, lp)
+			lp = logicalPort{}
 		}
 	}
+	data := []string{lp.portID, lp.portChassis, lp.portIP, lp.portMac, lp.portTag, lp.portType, lp.gatewayChassis}
+	outputData = append(outputData, data)
+	PrintablePorts.data = outputData
+	PrintablePorts.header = []string{"Port ID", "Chassis", "IP", "MAC", "Tag", "Type", "Gateway Chassis"}
+	PrintablePorts.mergedCell = []int{0}
 	portIPDict[lp.portLPName] = lp.portIP
 	portMACDict[lp.portLPName] = lp.portMac
 	portDict.PortIPDict = portIPDict
@@ -93,12 +121,17 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 	return logicalPortList
 }
 
+func printListPorts() {
+	tools := Tools.New()
+	tools.ShowInTable(PrintablePorts.data, PrintablePorts.header, PrintablePorts.mergedCell)
+}
+
 // GetPortDict returns a Dict of PortID: PortIP
 func (lps *LogicalPortList) GetPortDict() PortDict {
 	return lps.portDict
 }
 
-// ShowLogicalPort shows port list
-func (lps *LogicalPortList) ShowLogicalPort() {
-	fmt.Println(lps)
+// ListPortsDetail shows port list
+func (lps *LogicalPortList) ListPortsDetail() {
+	printListPorts()
 }

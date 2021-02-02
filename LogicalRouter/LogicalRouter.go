@@ -134,21 +134,23 @@ func getLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) {
 	outputData := [][]string{}
 	for _, router := range lRouters {
 		i := 1
-		logicalRouterDetail := logicalRouterDetail{}
-		logicalRouterDetail.name = router.name[0]
-		for _, routerPort := range router.ports {
-			for _, detailedPort := range lRouterInterface {
-				if routerPort == detailedPort.uuid {
-					logicalRouterDetail.logicalRouterPorts = append(logicalRouterDetail.logicalRouterPorts, detailedPort)
-					outputData = append(outputData, []string{router.name[0], strconv.Itoa(i), detailedPort.mac, detailedPort.networks, detailedPort.redirectChassis})
-					i++
+		if len(router.name) > 0 {
+			logicalRouterDetail := logicalRouterDetail{}
+			logicalRouterDetail.name = router.name[0]
+			for _, routerPort := range router.ports {
+				for _, detailedPort := range lRouterInterface {
+					if routerPort == detailedPort.uuid {
+						logicalRouterDetail.logicalRouterPorts = append(logicalRouterDetail.logicalRouterPorts, detailedPort)
+						outputData = append(outputData, []string{router.name[0], strconv.Itoa(i), detailedPort.mac, detailedPort.networks, detailedPort.redirectChassis})
+						i++
+					}
 				}
 			}
+			if len(logicalRouterDetail.logicalRouterPorts) == 0 {
+				outputData = append(outputData, []string{logicalRouterDetail.name, "", "", "", ""})
+			}
+			logicalRouters = append(logicalRouters, logicalRouterDetail)
 		}
-		if len(logicalRouterDetail.logicalRouterPorts) == 0 {
-			outputData = append(outputData, []string{logicalRouterDetail.name, "", "", "", ""})
-		}
-		logicalRouters = append(logicalRouters, logicalRouterDetail)
 	}
 	header := []string{"Router Name", "Port no.", "MAC address", "IP address", "Redirect Chassis"}
 	tools.ShowInTable(outputData, header, []int{0})
@@ -161,6 +163,7 @@ func listLogicalRoutersRoutes(ovnPod string, chassisDict Chassis.ChassisDict) {
 	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRouterRoutes := []logicalRouterRoute{}
 	for _, router := range lRouters {
+		fmt.Println(len(router.name))
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-route-list", router.name[0])
 		out, err := getRouteCommand.Output()
 		if err != nil {
@@ -242,29 +245,31 @@ func listLogicalRoutersNat(ovnPod string, chassisDict Chassis.ChassisDict) {
 	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRoutersNat := []logicalRouterNat{}
 	for _, router := range lRouters {
-		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-nat-list", router.name[0])
-		out, err := getRouteCommand.Output()
-		if err != nil {
-			log.Fatal(err)
-		}
-		output := string(out)
-		scanner := bufio.NewScanner(strings.NewReader(output))
-		for scanner.Scan() {
-			lrn := logicalRouterNat{}
-			line := strings.Fields(scanner.Text())
-			data := []string{"", "", "", ""}
-			if len(line) >= 3 {
-				if line[0] != "TYPE" {
-					lrn.routerName = router.name[0]
-					lrn.natType = line[0]
-					lrn.externalIp = line[1]
-					lrn.logicalIp = line[2]
-					data = []string{lrn.routerName, lrn.natType, lrn.externalIp, lrn.logicalIp}
-				}
+		if len(router.name) > 0 {
+			getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-nat-list", router.name[0])
+			out, err := getRouteCommand.Output()
+			if err != nil {
+				log.Fatal(err)
 			}
-			if lrn.routerName != "" {
-				logicalRoutersNat = append(logicalRoutersNat, lrn)
-				outputData = append(outputData, data)
+			output := string(out)
+			scanner := bufio.NewScanner(strings.NewReader(output))
+			for scanner.Scan() {
+				lrn := logicalRouterNat{}
+				line := strings.Fields(scanner.Text())
+				data := []string{"", "", "", ""}
+				if len(line) >= 3 {
+					if line[0] != "TYPE" {
+						lrn.routerName = router.name[0]
+						lrn.natType = line[0]
+						lrn.externalIp = line[1]
+						lrn.logicalIp = line[2]
+						data = []string{lrn.routerName, lrn.natType, lrn.externalIp, lrn.logicalIp}
+					}
+				}
+				if lrn.routerName != "" {
+					logicalRoutersNat = append(logicalRoutersNat, lrn)
+					outputData = append(outputData, data)
+				}
 			}
 		}
 	}

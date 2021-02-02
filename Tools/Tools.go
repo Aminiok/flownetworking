@@ -25,7 +25,6 @@ func pipeCommands(commands ...*exec.Cmd) (out []byte, err error) {
 	for i, command := range commands[:len(commands)-1] {
 		out, err := command.StdoutPipe()
 		if err != nil {
-			print("Error1")
 			return nil, err
 		}
 		command.Start()
@@ -33,7 +32,6 @@ func pipeCommands(commands ...*exec.Cmd) (out []byte, err error) {
 	}
 	final, err := commands[len(commands)-1].Output()
 	if err != nil {
-		print("Error 2")
 		log.Fatal(err)
 	}
 	return final, err
@@ -45,7 +43,7 @@ func (param *params) GetVersion() {
 
 func (param *params) GetOvnPod() string {
 	kubeCommand := exec.Command("/usr/bin/kubectl", "get", "pods")
-	grepCommand := exec.Command("grep", "anc-ovn-0")
+	grepCommand := exec.Command("grep", "anc-ovn")
 	awkCommand := exec.Command("awk", "{print $1}")
 	out, err := pipeCommands(kubeCommand, grepCommand, awkCommand)
 	if err != nil {

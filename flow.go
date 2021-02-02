@@ -62,6 +62,12 @@ func runListCommand(resource []string, ovnPod string) {
 	case "ch":
 		ch := Chassis.New(ovnPod)
 		ch.ListChassisDetail(ovnPod, resource)
+	case "port":
+		lp := LogicalPort.New(ovnPod)
+		lp.ListPortsDetail()
+	case "ports":
+		lp := LogicalPort.New(ovnPod)
+		lp.ListPortsDetail()
 	default:
 		tools.PrintHelp()
 		os.Exit(1)

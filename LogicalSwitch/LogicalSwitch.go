@@ -181,20 +181,10 @@ func getLogicalSwitchDetail(ovnPod string) {
 func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string) {
 	if len(inputParams) == 1 {
 		getLogicalSwitchDetail(ovnPod)
-	} /*else if (len(inputParams) == 2 && inputParams[1] == "routes") || (len(inputParams) == 2 && inputParams[1] == "rt") {
-		listLogicalRoutersRoutes(ovnPod)
-	} else if (len(inputParams) == 2 && inputParams[1] == "nat") || (len(inputParams) == 2 && inputParams[1] == "nats") {
-		listLogicalRoutersNat(ovnPod)
-	}*/
+	}
 }
 
 func (ls logicalSwitch) ShowLogicalSwitchDetail(ovnPod string, inputParams []string) {
-	/*	if (len(inputParams) == 3 && inputParams[1] == "routes") || (len(inputParams) == 3 && inputParams[1] == "rt") {
-			showLogicalRouterRoutes(inputParams[2], ovnPod)
-		} else if (len(inputParams) == 3 && inputParams[1] == "nat") || (len(inputParams) == 3 && inputParams[1] == "nats") {
-			showLogicalRouterNat(inputParams[2], ovnPod)
-		} else {
-			fmt.Println("Command not complete! Print Help")
-		}
-	*/
+	/*	TBD
+	 */
 }

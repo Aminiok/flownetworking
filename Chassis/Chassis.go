@@ -123,6 +123,8 @@ func showChassis(chassisName string, ovnPod string, logicalPortDict LogicalPort.
 				ch.encap = tools.RefactorString(line[1])
 			} else if line[0] == "ip:" && isChassisInfo {
 				ch.ip = tools.RefactorString(line[1])
+				data = []string{ch.name, ch.hostname, ch.encap, ch.ip, "", "", ""}
+				outputData = append(outputData, data)
 			} else if line[0] == "Port_Binding" && isChassisInfo {
 				pbID := tools.RefactorString(line[1])
 				PortIP := logicalPortDict.PortIPDict[pbID]
@@ -132,18 +134,13 @@ func showChassis(chassisName string, ovnPod string, logicalPortDict LogicalPort.
 			}
 		}
 	}
-	if len(outputData) > 0 {
-		header := []string{"Chassis ID", "Hostname", "Encap", "IP", "Port ID", "Port IP", "Port MAC"}
-		tools.ShowInTable(outputData, header, []int{0, 1, 2, 3})
-	} else {
-		log.Println("Chassis not found!")
-		tools.PrintHelp()
-	}
+	header := []string{"Chassis ID", "Hostname", "Encap", "IP", "Port ID", "Port IP", "Port MAC"}
+	tools.ShowInTable(outputData, header, []int{0, 1, 2, 3})
 }
 
 func printListChassis(ovnPod string) {
 	tools := Tools.New()
-	listChassis(ovnPod)
+	//listChassis(ovnPod)
 	tools.ShowInTable(PrintableChassis.data, PrintableChassis.header, PrintableChassis.mergedCell)
 }
 
