@@ -21,6 +21,7 @@ type logicalSwitchPort struct {
 type logicalSwitch struct {
 	switchName      string
 	switchPortsName []string
+	lsTunnelID      string
 }
 
 func New() logicalSwitch {
@@ -57,6 +58,7 @@ func generatePortHostDict(ovnPod string) []logicalSwitch {
 
 func getLogicalSwitches(ovnPod string) []logicalSwitch {
 	tools := Tools.New()
+	logicalSwitchPortConfigRegex := regexp.MustCompile(".*id=\"([0-9]*)\"")
 	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "list", "Logical_Switch")
 	out, err := kubeCtlCmd.Output()
 	if err != nil {
@@ -73,6 +75,9 @@ func getLogicalSwitches(ovnPod string) []logicalSwitch {
 				ls.switchName = tools.RefactorString(line[2])
 			} else if line[0] == "ports" {
 				ls.switchPortsName = tools.RefactorStringList(line[2:len(line)])
+			} else if line[0] == "other_config" {
+				split := strings.Split(logicalSwitchPortConfigRegex.FindString(line[2]), "=")
+				ls.lsTunnelID = tools.RefactorString(split[1])
 			}
 		} else {
 			logicalSwitches = append(logicalSwitches, ls)
@@ -111,6 +116,8 @@ func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
 				split := strings.Split(logicalSwitchPortExternalRegex.FindString(line[2]), "=")
 				if len(split) == 2 {
 					lsp.portIP = tools.RefactorString(split[1])
+				} else {
+					lsp.portIP = ""
 				}
 			} else if line[0] == "tag" {
 				lsp.portTag = tools.RefactorString(line[2])
@@ -169,13 +176,13 @@ func getLogicalSwitchDetail(ovnPod string) {
 		data := []string{}
 		for _, switchPort := range logicalSwitchPortList {
 			if tools.Contains(lSwitch.switchPortsName, switchPort.portID) {
-				data = []string{lSwitch.switchName, switchPort.portIP, switchPort.portMac, switchPort.portType, switchPort.portTag}
+				data = []string{lSwitch.switchName, lSwitch.lsTunnelID, switchPort.portIP, switchPort.portMac, switchPort.portType, switchPort.portTag}
 				outputData = append(outputData, data)
 			}
 		}
 	}
-	header := []string{"Logical Switch Name", "Port IP", "Port MAC", "Port Type", "Port Tag"}
-	tools.ShowInTable(outputData, header, []int{0})
+	header := []string{"Logical Switch Name", "Tunnel ID", "Port IP", "Port MAC", "Port Type", "Port Tag"}
+	tools.ShowInTable(outputData, header, []int{0, 1})
 }
 
 func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string) {

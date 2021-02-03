@@ -95,8 +95,11 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 				lp.portTag = tools.RefactorString(line[2])
 			}
 		} else {
-			data := []string{lp.portID, lp.portChassis, lp.portIP, lp.portMac, lp.portTag, lp.portType, lp.gatewayChassis}
-			outputData = append(outputData, data)
+			data := []string{lp.portLPName, lp.portChassis, lp.portIP, lp.portMac, lp.portType, lp.gatewayChassis}
+			// Filter underlay and router ports
+			if !strings.Contains(lp.portMac, "unknown") && !strings.Contains(lp.portMac, "router") {
+				outputData = append(outputData, data)
+			}
 			data = []string{}
 			if len(data) != 0 {
 				log.Fatal("error in removing data")
@@ -107,10 +110,12 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 			lp = logicalPort{}
 		}
 	}
-	data := []string{lp.portID, lp.portChassis, lp.portIP, lp.portMac, lp.portTag, lp.portType, lp.gatewayChassis}
-	outputData = append(outputData, data)
+	data := []string{lp.portLPName, lp.portChassis, lp.portIP, lp.portMac, lp.portType, lp.gatewayChassis}
+	if !strings.Contains(lp.portMac, "unknown") && !strings.Contains(lp.portMac, "router") {
+		outputData = append(outputData, data)
+	}
 	PrintablePorts.data = outputData
-	PrintablePorts.header = []string{"Port ID", "Chassis", "IP", "MAC", "Tag", "Type", "Gateway Chassis"}
+	PrintablePorts.header = []string{"Port Name", "Chassis", "IP", "MAC", "Type", "Gateway Chassis"}
 	PrintablePorts.mergedCell = []int{0}
 	portIPDict[lp.portLPName] = lp.portIP
 	portMACDict[lp.portLPName] = lp.portMac
@@ -121,9 +126,17 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 	return logicalPortList
 }
 
-func printListPorts() {
+func printListPorts(chassisIDDict map[string]string) {
 	tools := Tools.New()
-	tools.ShowInTable(PrintablePorts.data, PrintablePorts.header, PrintablePorts.mergedCell)
+	// change chassis ID to chassis Name
+	printableData := [][]string{}
+	for _, port := range PrintablePorts.data {
+		if port[1] != "" {
+			port[1] = chassisIDDict[port[1]]
+		}
+		printableData = append(printableData, port)
+	}
+	tools.ShowInTable(printableData, PrintablePorts.header, PrintablePorts.mergedCell)
 }
 
 // GetPortDict returns a Dict of PortID: PortIP
@@ -132,6 +145,6 @@ func (lps *LogicalPortList) GetPortDict() PortDict {
 }
 
 // ListPortsDetail shows port list
-func (lps *LogicalPortList) ListPortsDetail() {
-	printListPorts()
+func (lps *LogicalPortList) ListPortsDetail(chassisIDDict map[string]string) {
+	printListPorts(chassisIDDict)
 }

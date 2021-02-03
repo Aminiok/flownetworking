@@ -42,32 +42,20 @@ func runListCommand(resource []string, ovnPod string) {
 	//lp.GetPortIPDict()
 	tools := Tools.New()
 	switch resource[0] {
-	case "logicalrouters":
+	case "logicalrouters", "lr", "vpc":
 		ch := Chassis.New(ovnPod)
 		lr := LogicalRouter.New()
 		lr.ListLogicalRoutersDetail(ovnPod, resource, ch.GetChassisDict())
-	case "lr":
-		ch := Chassis.New(ovnPod)
-		lr := LogicalRouter.New()
-		lr.ListLogicalRoutersDetail(ovnPod, resource, ch.GetChassisDict())
-	case "logicalswitch":
+	case "logicalswitch", "ls", "network", "net":
 		ls := LogicalSwitch.New()
 		ls.ListLogicalSwitchDetail(ovnPod, resource)
-	case "ls":
-		ls := LogicalSwitch.New()
-		ls.ListLogicalSwitchDetail(ovnPod, resource)
-	case "chassis":
+	case "chassis", "ch":
 		ch := Chassis.New(ovnPod)
 		ch.ListChassisDetail(ovnPod, resource)
-	case "ch":
+	case "port", "ports":
 		ch := Chassis.New(ovnPod)
-		ch.ListChassisDetail(ovnPod, resource)
-	case "port":
 		lp := LogicalPort.New(ovnPod)
-		lp.ListPortsDetail()
-	case "ports":
-		lp := LogicalPort.New(ovnPod)
-		lp.ListPortsDetail()
+		lp.ListPortsDetail(ch.GetChassisDict().ChassisIDDict)
 	default:
 		tools.PrintHelp()
 		os.Exit(1)
@@ -78,15 +66,9 @@ func runShowCommand(resource []string, ovnPod string) {
 	lr := LogicalRouter.New()
 	tools := Tools.New()
 	switch resource[0] {
-	case "logicalrouter":
+	case "logicalrouter", "lr":
 		lr.ShowLogicalRoutersDetail(ovnPod, resource)
-	case "lr":
-		lr.ShowLogicalRoutersDetail(ovnPod, resource)
-	case "chassis":
-		lp := LogicalPort.New(ovnPod)
-		ch := Chassis.New(ovnPod)
-		ch.ShowChassisDetail(ovnPod, resource, lp.GetPortDict())
-	case "ch":
+	case "chassis", "ch":
 		lp := LogicalPort.New(ovnPod)
 		ch := Chassis.New(ovnPod)
 		ch.ShowChassisDetail(ovnPod, resource, lp.GetPortDict())

@@ -44,12 +44,37 @@ var PrintableChassis = printableChassis{
 type ChassisDict struct {
 	ChassisHostNameDict map[string]string
 	ChassisIPDict       map[string]string
+	ChassisIDDict       map[string]string
 }
 
 // New chassis object
 func New(ovnPod string) ChassisList {
 	ch, _ := listChassis(ovnPod)
 	return ch
+}
+
+func getChassisIDDict(ovnPod string) map[string]string {
+	kubeCtlCmd := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-sbctl", "list", "chassis")
+	chassisID := ""
+	out, err := kubeCtlCmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	output := string(out)
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	tools := Tools.New()
+	chassisIDDict := make(map[string]string)
+	for scanner.Scan() {
+		line := strings.Fields(scanner.Text())
+		if len(line) >= 2 {
+			if line[0] == "_uuid" {
+				chassisID = tools.RefactorString(line[2])
+			} else if line[0] == "name" {
+				chassisIDDict[chassisID] = tools.RefactorString(line[2])
+			}
+		}
+	}
+	return chassisIDDict
 }
 
 func listChassis(ovnPod string) (ChassisList, printableChassis) {
@@ -92,6 +117,7 @@ func listChassis(ovnPod string) (ChassisList, printableChassis) {
 	PrintableChassis.mergedCell = []int{0}
 	chassisDict.ChassisHostNameDict = chassisHostnameDict
 	chassisDict.ChassisIPDict = chassisIPDict
+	chassisDict.ChassisIDDict = getChassisIDDict(ovnPod)
 	chassisList.chassisDict = chassisDict
 	return chassisList, PrintableChassis
 }
@@ -134,7 +160,7 @@ func showChassis(chassisName string, ovnPod string, logicalPortDict LogicalPort.
 			}
 		}
 	}
-	header := []string{"Chassis ID", "Hostname", "Encap", "IP", "Port ID", "Port IP", "Port MAC"}
+	header := []string{"Chassis Name", "Hostname", "Encap", "IP", "Port ID", "Port IP", "Port MAC"}
 	tools.ShowInTable(outputData, header, []int{0, 1, 2, 3})
 }
 
