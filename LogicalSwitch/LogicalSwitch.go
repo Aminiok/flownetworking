@@ -123,14 +123,19 @@ func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
 				lsp.portTag = tools.RefactorString(line[2])
 			}
 		} else if len(line) == 0 {
-			lspList = append(lspList, lsp)
+			// remove localnet
+			if lsp.portType != "localnet" {
+				lspList = append(lspList, lsp)
+			}
 			lsp := logicalSwitchPort{}
 			if lsp.portName != "" {
 				log.Fatal("Error in creation of struct")
 			}
 		}
 	}
-	lspList = append(lspList, lsp)
+	if lsp.portType != "localnet" {
+		lspList = append(lspList, lsp)
+	}
 	return lspList
 }
 
@@ -176,12 +181,12 @@ func getLogicalSwitchDetail(ovnPod string) {
 		data := []string{}
 		for _, switchPort := range logicalSwitchPortList {
 			if tools.Contains(lSwitch.switchPortsName, switchPort.portID) {
-				data = []string{lSwitch.switchName, lSwitch.lsTunnelID, switchPort.portIP, switchPort.portMac, switchPort.portType, switchPort.portTag}
+				data = []string{lSwitch.switchName, lSwitch.lsTunnelID, switchPort.portIP, switchPort.portMac, switchPort.portType}
 				outputData = append(outputData, data)
 			}
 		}
 	}
-	header := []string{"Logical Switch Name", "Tunnel ID", "Port IP", "Port MAC", "Port Type", "Port Tag"}
+	header := []string{"Logical Switch Name", "Tunnel ID", "Port IP", "Port MAC", "Port Type"}
 	tools.ShowInTable(outputData, header, []int{0, 1})
 }
 
