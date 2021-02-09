@@ -163,7 +163,6 @@ func listLogicalRoutersRoutes(ovnPod string, chassisDict Chassis.ChassisDict) {
 	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRouterRoutes := []logicalRouterRoute{}
 	for _, router := range lRouters {
-		fmt.Println(len(router.name))
 		getRouteCommand := exec.Command("/usr/bin/kubectl", "exec", ovnPod, "ovn-nbctl", "lr-route-list", router.name[0])
 		out, err := getRouteCommand.Output()
 		if err != nil {
