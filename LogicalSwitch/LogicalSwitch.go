@@ -87,7 +87,7 @@ func getLogicalSwitches(ovnPod string) []logicalSwitch {
 	return logicalSwitches
 }
 
-func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
+func getAllLogicalSwitchPorts(ovnPod string, portMACDict map[string]string) []logicalSwitchPort {
 	tools := Tools.New()
 	logicalSwitchPortExternalRegex := regexp.MustCompile(".*\"neutron:cidrs\"=\"([0-9./]*)")
 	lspList := []logicalSwitchPort{}
@@ -123,8 +123,17 @@ func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
 				lsp.portTag = tools.RefactorString(line[2])
 			}
 		} else if len(line) == 0 {
-			// remove localnet
+			// exclude localnet
 			if lsp.portType != "localnet" {
+				portName := ""
+				if lsp.portMac == "" {
+					if strings.HasPrefix(lsp.portName, "router") {
+						portName = "lrp-" + lsp.portName
+					} else if strings.HasPrefix(lsp.portName, "ext_gw") {
+						portName = "lrp-" + lsp.portName
+					}
+					lsp.portMac = portMACDict[portName]
+				}
 				lspList = append(lspList, lsp)
 			}
 			lsp := logicalSwitchPort{}
@@ -134,6 +143,15 @@ func getAllLogicalSwitchPorts(ovnPod string) []logicalSwitchPort {
 		}
 	}
 	if lsp.portType != "localnet" {
+		portName := ""
+		if lsp.portMac == "" {
+			if strings.HasPrefix(lsp.portName, "router") {
+				portName = "lrp-" + lsp.portName
+			} else if strings.HasPrefix(lsp.portName, "ext_gw") {
+				portName = "lrp-" + lsp.portName
+			}
+			lsp.portMac = portMACDict[portName]
+		}
 		lspList = append(lspList, lsp)
 	}
 	return lspList
@@ -172,11 +190,11 @@ func getLogicalSwitchPort(ovnPod string, portName string) logicalSwitchPort {
 	return lsp
 }
 
-func getLogicalSwitchDetail(ovnPod string) {
+func getLogicalSwitchDetail(ovnPod string, portMACDict map[string]string) {
 	tools := Tools.New()
 	outputData := [][]string{}
 	logicalSwitches := getLogicalSwitches(ovnPod)
-	logicalSwitchPortList := getAllLogicalSwitchPorts(ovnPod)
+	logicalSwitchPortList := getAllLogicalSwitchPorts(ovnPod, portMACDict)
 	for _, lSwitch := range logicalSwitches {
 		data := []string{}
 		for _, switchPort := range logicalSwitchPortList {
@@ -190,9 +208,9 @@ func getLogicalSwitchDetail(ovnPod string) {
 	tools.ShowInTable(outputData, header, []int{0, 1})
 }
 
-func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string) {
+func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string, portMACDict map[string]string) {
 	if len(inputParams) == 1 {
-		getLogicalSwitchDetail(ovnPod)
+		getLogicalSwitchDetail(ovnPod, portMACDict)
 	}
 }
 

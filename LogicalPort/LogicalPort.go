@@ -99,13 +99,14 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 			// Filter underlay and router ports
 			if !strings.Contains(lp.portMac, "unknown") && !strings.Contains(lp.portMac, "router") {
 				outputData = append(outputData, data)
+				portIPDict[lp.portLPName] = lp.portIP
+				portMACDict[lp.portLPName] = lp.portMac
 			}
 			data = []string{}
 			if len(data) != 0 {
 				log.Fatal("error in removing data")
 			}
-			portIPDict[lp.portLPName] = lp.portIP
-			portMACDict[lp.portLPName] = lp.portMac
+
 			logicalPortList.portList = append(logicalPortList.portList, lp)
 			lp = logicalPort{}
 		}
@@ -113,12 +114,13 @@ func getLogicalPortList(ovnPod string) LogicalPortList {
 	data := []string{lp.portLPName, lp.portChassis, lp.portIP, lp.portMac, lp.portType, lp.gatewayChassis}
 	if !strings.Contains(lp.portMac, "unknown") && !strings.Contains(lp.portMac, "router") {
 		outputData = append(outputData, data)
+		portIPDict[lp.portLPName] = lp.portIP
+		portMACDict[lp.portLPName] = lp.portMac
 	}
 	PrintablePorts.data = outputData
 	PrintablePorts.header = []string{"Port Name", "Chassis", "IP", "MAC", "Type", "Gateway Chassis"}
 	PrintablePorts.mergedCell = []int{0}
-	portIPDict[lp.portLPName] = lp.portIP
-	portMACDict[lp.portLPName] = lp.portMac
+
 	portDict.PortIPDict = portIPDict
 	portDict.PortMACDict = portMACDict
 	logicalPortList.portList = append(logicalPortList.portList, lp)

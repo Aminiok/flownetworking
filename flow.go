@@ -47,8 +47,9 @@ func runListCommand(resource []string, ovnPod string) {
 		lr := LogicalRouter.New()
 		lr.ListLogicalRoutersDetail(ovnPod, resource, ch.GetChassisDict())
 	case "logicalswitch", "ls", "network", "net":
+		lp := LogicalPort.New(ovnPod)
 		ls := LogicalSwitch.New()
-		ls.ListLogicalSwitchDetail(ovnPod, resource)
+		ls.ListLogicalSwitchDetail(ovnPod, resource, lp.GetPortDict().PortMACDict)
 	case "chassis", "ch":
 		ch := Chassis.New(ovnPod)
 		ch.ListChassisDetail(ovnPod, resource)
