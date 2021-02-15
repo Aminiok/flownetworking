@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+// RouterDict is a dict containing PortMAC: RouterID
+type RouterDict struct {
+	PortMACRouterDict map[string]string
+}
+
 type logicalRouterPort struct {
 	name            string
 	uuid            string
@@ -25,6 +30,7 @@ type logicalRouter struct {
 	nat          []string
 	ports        []string
 	staticRoutes []string
+	routerDict   RouterDict
 }
 
 type logicalRouterDetail struct {
@@ -126,23 +132,26 @@ func getLogicalRouterPorts(ovnPod string, chassisDict Chassis.ChassisDict) []log
 	return logicalRouterPorts
 }
 
-func getLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) {
-	tools := Tools.New()
+func getLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) [][]string {
 	lRouterInterface := getLogicalRouterPorts(ovnPod, chassisDict)
 	lRouters := getLogicalRouters(ovnPod, chassisDict)
 	logicalRouters := []logicalRouterDetail{}
+	routerDict := RouterDict{}
+	portMACRouterDict := make(map[string]string)
 	outputData := [][]string{}
 	for _, router := range lRouters {
-		i := 1
 		if len(router.name) > 0 {
 			logicalRouterDetail := logicalRouterDetail{}
 			logicalRouterDetail.name = router.name[0]
+			i := 1
 			for _, routerPort := range router.ports {
+
 				for _, detailedPort := range lRouterInterface {
 					if routerPort == detailedPort.uuid {
 						logicalRouterDetail.logicalRouterPorts = append(logicalRouterDetail.logicalRouterPorts, detailedPort)
 						outputData = append(outputData, []string{router.name[0], strconv.Itoa(i), detailedPort.mac, detailedPort.networks, detailedPort.redirectChassis})
 						i++
+						portMACRouterDict[detailedPort.mac] = logicalRouterDetail.name
 					}
 				}
 			}
@@ -152,6 +161,13 @@ func getLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) {
 			logicalRouters = append(logicalRouters, logicalRouterDetail)
 		}
 	}
+	routerDict.PortMACRouterDict = portMACRouterDict
+	return outputData
+}
+
+func listLogicalRoutersDetail(ovnPod string, chassisDict Chassis.ChassisDict) {
+	tools := Tools.New()
+	outputData := getLogicalRoutersDetail(ovnPod, chassisDict)
 	header := []string{"Router Name", "Port no.", "MAC address", "IP address", "Redirect Chassis"}
 	tools.ShowInTable(outputData, header, []int{0})
 }
@@ -306,9 +322,19 @@ func showLogicalRouterNat(routerName string, ovnPod string) {
 	tools.ShowInTable(outputData, header, []int{0})
 }
 
+func (lr logicalRouter) GetRouterDict() RouterDict {
+	return lr.routerDict
+}
+
+func (lr logicalRouter) GetLogicalRoutersDetail(ovnPod string) [][]string {
+	ch := Chassis.New(ovnPod)
+	data := getLogicalRoutersDetail(ovnPod, ch.GetChassisDict())
+	return data
+}
+
 func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string, chassisDict Chassis.ChassisDict) {
 	if len(inputParams) == 1 {
-		getLogicalRoutersDetail(ovnPod, chassisDict)
+		listLogicalRoutersDetail(ovnPod, chassisDict)
 	} else if (len(inputParams) == 2 && inputParams[1] == "routes") || (len(inputParams) == 2 && inputParams[1] == "rt") {
 		listLogicalRoutersRoutes(ovnPod, chassisDict)
 	} else if (len(inputParams) == 2 && inputParams[1] == "nat") || (len(inputParams) == 2 && inputParams[1] == "nats") {

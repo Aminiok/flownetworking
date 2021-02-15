@@ -110,7 +110,6 @@ func (param *params) RefactorString(origString string) string {
 
 func (param *params) GetNetworkFromIP(ipAddress string) string {
 	ipAddressArray := strings.Split(ipAddress, "/")
-	fmt.Println(ipAddressArray)
 	if len(ipAddressArray) == 2 {
 		netMask, err := strconv.Atoi(ipAddressArray[1])
 		if err != nil {

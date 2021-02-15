@@ -2,7 +2,9 @@ package LogicalSwitch
 
 import (
 	"bufio"
+	"flownet/LogicalRouter"
 	"flownet/Tools"
+	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
@@ -22,6 +24,7 @@ type logicalSwitch struct {
 	switchName      string
 	switchPortsName []string
 	lsTunnelID      string
+	networkCIDR     string
 }
 
 func New() logicalSwitch {
@@ -199,18 +202,23 @@ func getLogicalSwitchDetail(ovnPod string, portMACDict map[string]string) {
 		data := []string{}
 		for _, switchPort := range logicalSwitchPortList {
 			if tools.Contains(lSwitch.switchPortsName, switchPort.portID) {
-				data = []string{lSwitch.switchName, lSwitch.lsTunnelID, switchPort.portIP, switchPort.portMac, switchPort.portType}
+				data = []string{lSwitch.switchName, lSwitch.lsTunnelID, tools.GetNetworkFromIP(switchPort.portIP), switchPort.portIP, switchPort.portMac, switchPort.portType}
 				outputData = append(outputData, data)
 			}
 		}
 	}
-	header := []string{"Logical Switch Name", "Tunnel ID", "Port IP", "Port MAC", "Port Type"}
-	tools.ShowInTable(outputData, header, []int{0, 1})
+	header := []string{"Logical Switch Name", "Tunnel ID", "Network CIDR", "Port IP", "Port MAC", "Port Type"}
+	tools.ShowInTable(outputData, header, []int{0, 1, 2})
 }
 
 func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string, portMACDict map[string]string) {
 	if len(inputParams) == 1 {
 		getLogicalSwitchDetail(ovnPod, portMACDict)
+	} else if len(inputParams) == 2 && inputParams[1] == "detail" {
+		lr := LogicalRouter.New()
+		_ = lr.GetLogicalRoutersDetail(ovnPod)
+		routerDict := lr.GetRouterDict()
+		fmt.Println(routerDict.PortMACRouterDict)
 	}
 }
 
