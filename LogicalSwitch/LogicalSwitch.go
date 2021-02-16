@@ -21,10 +21,30 @@ type logicalSwitchPort struct {
 }
 
 type logicalSwitch struct {
-	switchName      string
+	switchName      string `json:"network_name"`
 	switchPortsName []string
 	lsTunnelID      string
 	networkCIDR     string
+}
+
+//Port is the port information used for JSON printing
+type Port struct {
+	PortIP   string `json:"port_ip"`
+	PortMAC  string `json:"port_mac"`
+	PortType string `json:"port_type"`
+}
+
+// Network is the network information used for JSON printing
+type Network struct {
+	NetworkName     string `json:"network_name"`
+	NetworkTunnelID string `json:"tunnel_id"`
+	NetworkCIDR     string `json:"network_cidr"`
+	NetworkPorts    []Port `json:"ports"`
+}
+
+// Networks is the list of networks and its ports used for JSON printing
+type Networks struct {
+	NetworkList []Network `json:"networks"`
 }
 
 func New() logicalSwitch {
@@ -192,12 +212,9 @@ func getLogicalSwitchPort(ovnPod string, portName string) logicalSwitchPort {
 	}
 	return lsp
 }
-
-func getLogicalSwitchDetail(ovnPod string, portMACDict map[string]string) {
+func printLogicalSwitchTable(logicalSwitches []logicalSwitch, logicalSwitchPortList []logicalSwitchPort) {
 	tools := Tools.New()
 	outputData := [][]string{}
-	logicalSwitches := getLogicalSwitches(ovnPod)
-	logicalSwitchPortList := getAllLogicalSwitchPorts(ovnPod, portMACDict)
 	for _, lSwitch := range logicalSwitches {
 		data := []string{}
 		for _, switchPort := range logicalSwitchPortList {
@@ -211,18 +228,46 @@ func getLogicalSwitchDetail(ovnPod string, portMACDict map[string]string) {
 	tools.ShowInTable(outputData, header, []int{0, 1, 2})
 }
 
-func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string, portMACDict map[string]string) {
-	if len(inputParams) == 1 {
-		getLogicalSwitchDetail(ovnPod, portMACDict)
-	} else if len(inputParams) == 2 && inputParams[1] == "detail" {
+func printLogicalSwitchJSON(logicalSwitches []logicalSwitch, logicalSwitchPortList []logicalSwitchPort) {
+	tools := Tools.New()
+	networkList := Networks{}
+	for _, lSwitch := range logicalSwitches {
+		network := Network{NetworkName: lSwitch.switchName, NetworkTunnelID: lSwitch.lsTunnelID}
+		for _, switchPort := range logicalSwitchPortList {
+			if tools.Contains(lSwitch.switchPortsName, switchPort.portID) {
+				network.NetworkCIDR = tools.GetNetworkFromIP(switchPort.portIP)
+				port := Port{PortIP: switchPort.portIP, PortMAC: switchPort.portMac, PortType: switchPort.portType}
+				network.NetworkPorts = append(network.NetworkPorts, port)
+			}
+		}
+		networkList.NetworkList = append(networkList.NetworkList, network)
+	}
+	tools.PrintInJSON(networkList)
+}
+
+func getLogicalSwitchDetail(ovnPod string, portMACDict map[string]string, jsonOutput bool) {
+	logicalSwitches := getLogicalSwitches(ovnPod)
+	logicalSwitchPortList := getAllLogicalSwitchPorts(ovnPod, portMACDict)
+	if jsonOutput {
+		printLogicalSwitchJSON(logicalSwitches, logicalSwitchPortList)
+
+	} else {
+		printLogicalSwitchTable(logicalSwitches, logicalSwitchPortList)
+	}
+}
+
+func (ls logicalSwitch) ListLogicalSwitchDetail(ovnPod string, inputParams []string, portMACDict map[string]string, jsonOutput bool) {
+	if len(inputParams) == 2 && inputParams[1] == "detail" {
 		lr := LogicalRouter.New()
 		_ = lr.GetLogicalRoutersDetail(ovnPod)
 		routerDict := lr.GetRouterDict()
 		fmt.Println(routerDict.PortMACRouterDict)
+	} else {
+		getLogicalSwitchDetail(ovnPod, portMACDict, jsonOutput)
 	}
 }
 
-func (ls logicalSwitch) ShowLogicalSwitchDetail(ovnPod string, inputParams []string) {
+func (ls logicalSwitch) ShowLogicalSwitchDetail(ovnPod string, inputParams []string, jsonOutput bool) {
 	/*	TBD
 	 */
 }

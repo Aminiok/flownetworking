@@ -147,6 +147,6 @@ func (lps *LogicalPortList) GetPortDict() PortDict {
 }
 
 // ListPortsDetail shows port list
-func (lps *LogicalPortList) ListPortsDetail(chassisIDDict map[string]string) {
+func (lps *LogicalPortList) ListPortsDetail(chassisIDDict map[string]string, jsonOutput bool) {
 	printListPorts(chassisIDDict)
 }

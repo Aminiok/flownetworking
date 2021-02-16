@@ -1,6 +1,7 @@
 package Tools
 
 import (
+	"encoding/json"
 	"flownet/Tools/ipsubnet"
 	"flownet/Tools/tablewriter"
 	"fmt"
@@ -84,6 +85,14 @@ func (param *params) ShowInTable(data [][]string, header []string, mergeColumnIn
 	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	table.AppendBulk(data)
 	table.Render()
+}
+
+func (param *params) PrintInJSON(data interface{}) {
+	prettyJSON, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Fatal("Failed to generate json", err)
+	}
+	fmt.Printf("%s\n", string(prettyJSON))
 }
 
 func (param *params) RefactorStringList(stringList []string) []string {

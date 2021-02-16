@@ -332,7 +332,7 @@ func (lr logicalRouter) GetLogicalRoutersDetail(ovnPod string) [][]string {
 	return data
 }
 
-func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string, chassisDict Chassis.ChassisDict) {
+func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []string, chassisDict Chassis.ChassisDict, jsonOutput bool) {
 	if len(inputParams) == 1 {
 		listLogicalRoutersDetail(ovnPod, chassisDict)
 	} else if (len(inputParams) == 2 && inputParams[1] == "routes") || (len(inputParams) == 2 && inputParams[1] == "rt") {
@@ -342,7 +342,7 @@ func (lr logicalRouter) ListLogicalRoutersDetail(ovnPod string, inputParams []st
 	}
 }
 
-func (lr logicalRouter) ShowLogicalRoutersDetail(ovnPod string, inputParams []string) {
+func (lr logicalRouter) ShowLogicalRoutersDetail(ovnPod string, inputParams []string, jsonOutput bool) {
 	if (len(inputParams) == 3 && inputParams[1] == "routes") || (len(inputParams) == 3 && inputParams[1] == "rt") {
 		showLogicalRouterRoutes(inputParams[2], ovnPod)
 	} else if (len(inputParams) == 3 && inputParams[1] == "nat") || (len(inputParams) == 3 && inputParams[1] == "nats") {

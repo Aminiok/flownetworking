@@ -176,7 +176,7 @@ func (ch *ChassisList) GetChassisDict() ChassisDict {
 }
 
 // ListChassisDetail executes all ls ch commands
-func (ch *ChassisList) ListChassisDetail(ovnPod string, inputParams []string) {
+func (ch *ChassisList) ListChassisDetail(ovnPod string, inputParams []string, jsonOutput bool) {
 	if len(inputParams) == 1 {
 		printListChassis(ovnPod)
 	} else {
@@ -185,7 +185,7 @@ func (ch *ChassisList) ListChassisDetail(ovnPod string, inputParams []string) {
 }
 
 // ShowChassisDetail executes all sh ch commands
-func (ch *ChassisList) ShowChassisDetail(ovnPod string, inputParams []string, logicalPortDict LogicalPort.PortDict) {
+func (ch *ChassisList) ShowChassisDetail(ovnPod string, inputParams []string, logicalPortDict LogicalPort.PortDict, jsonOutput bool) {
 	tools := Tools.New()
 	if len(inputParams) == 2 {
 		showChassis(inputParams[1], ovnPod, logicalPortDict)
